@@ -20,12 +20,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-firestore-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
-// ============================================================
-// ⚙️  YOUR FIREBASE CONFIG — استبدل هذه القيم بقيمك
-// ============================================================
 const firebaseConfig = {
   apiKey:            "AIzaSyDeR8_GMfuYGyghbiw4iTTn4OOdbxklx9c",
   authDomain:        "almas-institute.firebaseapp.com",
@@ -34,9 +32,9 @@ const firebaseConfig = {
   messagingSenderId: "678759234948",
   appId:             "1:678759234948:web:684e1e36cafd4c61f031d1"
 };
-// ============================================================
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 </script>
 
 <style>
@@ -52,6 +50,22 @@ const db = firebase.firestore();
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Cairo',sans-serif;background:var(--surface);color:var(--text);min-height:100vh;}
 
+/* LOGIN SCREEN */
+.login-screen{position:fixed;inset:0;background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 60%,#1a3a2a 100%);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:white;border-radius:20px;padding:40px 36px;width:100%;max-width:420px;box-shadow:0 25px 60px rgba(0,0,0,0.4);}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-diamond{width:64px;height:64px;background:linear-gradient(135deg,var(--gold),var(--gold-light));clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.login-logo h2{color:var(--navy);font-size:22px;font-weight:800;margin-bottom:4px;}
+.login-logo p{color:var(--text2);font-size:13px;}
+.login-field{margin-bottom:16px;}
+.login-field label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:6px;}
+.login-field input{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-family:'Cairo',sans-serif;font-size:14px;transition:border-color 0.2s;background:var(--surface);}
+.login-field input:focus{outline:none;border-color:var(--gold);background:white;}
+.login-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:var(--navy);border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:6px;}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,0.4);}
+.login-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.login-error{background:#FCE8E6;color:var(--danger);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;text-align:center;}
+.login-footer{text-align:center;margin-top:20px;font-size:12px;color:var(--text2);}
 /* SYNC INDICATOR */
 .sync-bar{background:var(--navy-mid);color:rgba(255,255,255,0.7);font-size:12px;text-align:center;padding:4px;display:flex;align-items:center;justify-content:center;gap:8px;}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:#888;flex-shrink:0;transition:background 0.3s;}
@@ -174,6 +188,28 @@ tbody td{padding:10px 10px;vertical-align:middle;}
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-diamond">◆</div>
+      <h2>معهد الألماس التعليمي</h2>
+      <p>نظام إدارة الطلاب المتكامل</p>
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-field">
+      <label>البريد الإلكتروني</label>
+      <input type="email" id="loginEmail" placeholder="example@email.com" dir="ltr">
+    </div>
+    <div class="login-field">
+      <label>كلمة المرور</label>
+      <input type="password" id="loginPass" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">🔐 تسجيل الدخول</button>
+    <div class="login-footer">معهد الألماس التعليمي © 2025</div>
+  </div>
+</div>
+
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
@@ -194,7 +230,7 @@ tbody td{padding:10px 10px;vertical-align:middle;}
       <div class="logo-diamond">◆</div>
       <div class="logo-text">
         <h1>معهد الألماس التعليمي</h1>
-        <p>نظام إدارة الطلاب — مزامنة فورية ☁️</p>
+        <p>نظام إدارة الطلاب — مزامنة فورية ☁️ | <span id="userEmailLabel" style="color:var(--gold-light)"></span></p>
       </div>
     </div>
     <div class="header-stats">
@@ -207,6 +243,7 @@ tbody td{padding:10px 10px;vertical-align:middle;}
       <button class="btn btn-outline" onclick="exportExcel()">📤 Excel</button>
       <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">📥 استيراد</button>
       <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
+      <button class="btn btn-danger" onclick="doLogout()" title="تسجيل الخروج">🚪 خروج</button>
     </div>
   </div>
   <nav class="nav-tabs">
@@ -434,7 +471,7 @@ tbody td{padding:10px 10px;vertical-align:middle;}
 // ============================================================
 const TEACHERS=['منهاج','عبدو عبدو','وضاح المحيثاوي','مشهور برجاس','سالي صابوني','رامي الشومري','هاشم أبو سعد','مأمون الحكيم','معتصم الشعار','خالد أبو عجرم','أسامة ملاك','ضياء عبد القادر','إيهاب أبو فخر','نبيل المعاز','ثامر أبو حسان','سامر أبو شقره','وليد كيوان','عاهد سلام','كليع كيوان','ليال السلمان'];
 const SUBJECTS=['رياضيات','فيزياء','كيمياء','فيزياء وكيمياء','علوم','عربي','إنكليزي','فرنسي','روسي','فلسفة','تاريخ','جغرافيا','ديانة'];
-const RECEIVERS=['مناف البربور','رانيا مرش','أخرى'];
+const RECEIVERS=['مناف البربور','رانيا نرش','أخرى'];
 
 // ============================================================
 // STATE
@@ -448,6 +485,44 @@ let unsubAtt = null;
 let isFirebaseReady = false;
 
 // ============================================================
+// AUTH — LOGIN / LOGOUT
+// ============================================================
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginError');
+  err.style.display = 'none';
+  if (!email || !pass) { showLoginError('الرجاء إدخال البريد وكلمة المرور'); return; }
+  btn.disabled = true; btn.textContent = '⏳ جاري التحقق...';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged will handle the rest
+  } catch(e) {
+    const msgs = {
+      'auth/user-not-found':    'البريد الإلكتروني غير مسجّل',
+      'auth/wrong-password':    'كلمة المرور غير صحيحة',
+      'auth/invalid-email':     'صيغة البريد الإلكتروني غير صحيحة',
+      'auth/too-many-requests': 'تم تجاوز عدد المحاولات، حاول لاحقاً',
+      'auth/invalid-credential':'البريد أو كلمة المرور غير صحيحة',
+    };
+    showLoginError(msgs[e.code] || 'خطأ في تسجيل الدخول: ' + e.message);
+    btn.disabled = false; btn.textContent = '🔐 تسجيل الدخول';
+  }
+}
+
+function showLoginError(msg) {
+  const err = document.getElementById('loginError');
+  err.textContent = '⚠️ ' + msg;
+  err.style.display = 'block';
+}
+
+function doLogout() {
+  if (!confirm('هل تريد تسجيل الخروج؟')) return;
+  auth.signOut();
+}
+
+// ============================================================
 // FIREBASE INIT & REALTIME LISTENERS
 // ============================================================
 function checkFirebaseConfig() {
@@ -457,52 +532,50 @@ function checkFirebaseConfig() {
 
 async function initFirebase() {
   const overlay = document.getElementById('loadingOverlay');
-  const msg = document.getElementById('loadingMsg');
+  const loginScreen = document.getElementById('loginScreen');
 
-  if (!checkFirebaseConfig()) {
-    document.getElementById('configWarning').style.display = 'block';
-    setSyncStatus('error', '⚠️ Firebase غير مضبوط — البيانات تُحفظ محلياً');
-    // fallback to localStorage
-    students = JSON.parse(localStorage.getItem('almas_students') || '[]');
-    attendance = JSON.parse(localStorage.getItem('almas_att') || '{}');
-    overlay.style.display = 'none';
-    renderStudentTable();
-    updateStats();
-    return;
-  }
+  // Watch auth state
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      // Logged in
+      loginScreen.style.display = 'none';
+      overlay.style.display = 'flex';
+      document.getElementById('loadingMsg').textContent = 'جاري تحميل البيانات...';
+      // show user email in header
+      document.getElementById('userEmailLabel').textContent = user.email;
+      setSyncStatus('syncing', 'جاري المزامنة...');
 
-  try {
-    msg.textContent = 'جاري الاتصال بقاعدة البيانات...';
-    setSyncStatus('syncing', 'جاري المزامنة...');
+      // Students realtime listener
+      unsubStudents = db.collection('students').onSnapshot(snap => {
+        students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderStudentTable();
+        updateStats();
+        populateAttStudents();
+        populatePayFilterStudent();
+        setSyncStatus('live', 'متصل — مزامنة فورية ☁️');
+        setSyncTime();
+        isFirebaseReady = true;
+        overlay.style.display = 'none';
+      }, err => {
+        setSyncStatus('error', 'خطأ: ' + err.message);
+        overlay.style.display = 'none';
+      });
 
-    // Students realtime listener
-    unsubStudents = db.collection('students').onSnapshot(snap => {
-      students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderStudentTable();
-      updateStats();
-      populateAttStudents();
-      populatePayFilterStudent();
-      setSyncStatus('live', 'متصل — مزامنة فورية ☁️');
-      setSyncTime();
-      isFirebaseReady = true;
+      // Attendance realtime listener
+      unsubAtt = db.collection('attendance').doc('records').onSnapshot(snap => {
+        attendance = snap.exists ? snap.data() : {};
+        updateStats();
+      }, () => { attendance = {}; });
+
+    } else {
+      // Not logged in — show login screen
+      if (unsubStudents) { unsubStudents(); unsubStudents = null; }
+      if (unsubAtt) { unsubAtt(); unsubAtt = null; }
       overlay.style.display = 'none';
-    }, err => {
-      console.error(err);
-      setSyncStatus('error', 'خطأ في الاتصال — ' + err.message);
-      overlay.style.display = 'none';
-    });
-
-    // Attendance realtime listener
-    unsubAtt = db.collection('attendance').doc('records').onSnapshot(snap => {
-      if (snap.exists) attendance = snap.data();
-      else attendance = {};
-      updateStats();
-    }, () => { attendance = {}; });
-
-  } catch(e) {
-    setSyncStatus('error', 'فشل الاتصال: ' + e.message);
-    overlay.style.display = 'none';
-  }
+      loginScreen.style.display = 'flex';
+      isFirebaseReady = false;
+    }
+  });
 }
 
 function setSyncStatus(state, msg) {
