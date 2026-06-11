@@ -822,6 +822,7 @@ function renderStudentTable() {
       <td><div class="action-btns">
         <button class="btn btn-outline btn-sm" onclick="viewStudent('${s.id}')">👁</button>
         <button class="btn btn-gold btn-sm" onclick="openEditModal('${s.id}')">✏️</button>
+        <button class="btn btn-success btn-sm" onclick="printPayments('${s.id}')" title="طباعة الدفعات">🖨️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}')">🗑</button>
       </div></td></tr>`;
   }).join('');
@@ -1061,6 +1062,134 @@ function importExcel(event) {
     event.target.value='';
   };
   reader.readAsBinaryString(file);
+}
+
+// ============================================================
+// PRINT PAYMENTS
+// ============================================================
+function printPayments(id) {
+  const s = students.find(x => x.id === id);
+  if (!s) return;
+  const payments = s.payments || [];
+  const total = payments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
+  const today = new Date().toLocaleDateString('ar-SY', {year:'numeric', month:'long', day:'numeric'});
+
+  const rows = payments.length === 0
+    ? `<tr><td colspan="5" style="text-align:center;padding:20px;color:#888">لا توجد دفعات مسجلة</td></tr>`
+    : payments.map((p, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:700;color:#8B6914">${(parseFloat(p.amount)||0).toLocaleString('ar-SY')} ${s.currency||''}</td>
+        <td>${p.date || '—'}</td>
+        <td>${p.receiver || '—'}</td>
+        <td style="color:#5A4E3C">${p.note || ''}</td>
+      </tr>`).join('');
+
+  const win = window.open('', '_blank', 'width=800,height=600');
+  win.document.write(`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>دفعات ${s.name} ${s.surname}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Cairo', sans-serif; background: #fff; color: #1A1410; padding: 30px; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #C9A84C; }
+  .logo-block { display: flex; align-items: center; gap: 12px; }
+  .diamond { width: 50px; height: 50px; background: linear-gradient(135deg,#F0D080,#C9A84C); clip-path: polygon(50% 0%,100% 50%,50% 100%,0% 50%); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .institute-name { font-size: 20px; font-weight: 900; color: #0D1B2A; }
+  .institute-sub { font-size: 12px; color: #5A4E3C; margin-top: 2px; }
+  .print-date { font-size: 12px; color: #888; text-align: left; }
+
+  .student-card { background: linear-gradient(135deg,#0D1B2A,#243B55); color: white; border-radius: 12px; padding: 18px 24px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .s-field label { font-size: 11px; color: rgba(255,255,255,0.6); display: block; margin-bottom: 3px; }
+  .s-field span { font-size: 14px; font-weight: 600; color: #F0D080; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  thead th { background: #0D1B2A; color: #F0D080; padding: 12px 10px; text-align: right; font-size: 13px; }
+  tbody tr { border-bottom: 1px solid #EEE9DC; }
+  tbody tr:nth-child(even) { background: #F8F6F0; }
+  tbody td { padding: 10px 10px; font-size: 13px; vertical-align: middle; }
+
+  .total-box { background: linear-gradient(135deg,#0D1B2A,#1A2E45); color: white; border-radius: 10px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .total-box .lbl { font-size: 14px; color: rgba(255,255,255,0.7); }
+  .total-box .amount { font-size: 26px; font-weight: 900; color: #F0D080; }
+  .total-box .currency { font-size: 14px; color: rgba(255,255,255,0.6); margin-right: 6px; }
+
+  .footer { text-align: center; font-size: 11px; color: #aaa; padding-top: 16px; border-top: 1px dashed #ddd; }
+  .signature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 30px 0 20px; }
+  .sig-box { text-align: center; padding-top: 40px; border-top: 1px solid #ccc; font-size: 12px; color: #888; }
+
+  @media print {
+    body { padding: 15px; }
+    .no-print { display: none; }
+    @page { margin: 1cm; size: A4; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-block">
+    <div class="diamond">◆</div>
+    <div>
+      <div class="institute-name">معهد الألماس التعليمي</div>
+      <div class="institute-sub">كشف الدفعات المالية</div>
+    </div>
+  </div>
+  <div class="print-date">
+    <div>تاريخ الطباعة</div>
+    <div style="font-weight:600;color:#333">${today}</div>
+  </div>
+</div>
+
+<div class="student-card">
+  <div class="s-field"><label>اسم الطالب</label><span>${s.name} ${s.surname}</span></div>
+  <div class="s-field"><label>اسم الأب</label><span>${s.father || '—'}</span></div>
+  <div class="s-field"><label>الصف</label><span>${s.grade || '—'}</span></div>
+  <div class="s-field"><label>الفرع</label><span>${s.branch !== 'لا يوجد' ? s.branch : '—'}</span></div>
+  <div class="s-field"><label>المدرسة</label><span>${s.school || '—'}</span></div>
+  <div class="s-field"><label>الموبايل</label><span>${s.mobile || '—'}</span></div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>المبلغ</th>
+      <th>تاريخ الدفعة</th>
+      <th>المستلم</th>
+      <th>ملاحظة</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="total-box">
+  <span class="lbl">إجمالي المبالغ المدفوعة</span>
+  <div>
+    <span class="amount">${total.toLocaleString('ar-SY')}</span>
+    <span class="currency">${s.currency || 'ليرة سورية'}</span>
+  </div>
+</div>
+
+<div class="signature-row">
+  <div class="sig-box">توقيع المستلم</div>
+  <div class="sig-box">توقيع ولي الأمر</div>
+</div>
+
+<div class="footer">معهد الألماس التعليمي — هذه الوثيقة صادرة بتاريخ ${today}</div>
+
+<div class="no-print" style="text-align:center;margin-top:20px">
+  <button onclick="window.print()" style="padding:10px 30px;background:#C9A84C;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;color:#0D1B2A;cursor:pointer">🖨️ طباعة</button>
+  <button onclick="window.close()" style="padding:10px 20px;background:#eee;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:15px;cursor:pointer;margin-right:10px">إغلاق</button>
+</div>
+
+</body>
+</html>`);
+  win.document.close();
 }
 
 // ============================================================
