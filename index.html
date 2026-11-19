@@ -298,6 +298,7 @@ tbody td{padding:10px 10px;vertical-align:middle;}
     <div class="nav-tab" onclick="switchTab('grades',this)">📝 العلامات والنتائج</div>
     <div class="nav-tab" onclick="switchTab('payments',this)">💰 المدفوعات</div>
     <div class="nav-tab" onclick="switchTab('reports',this)">📊 التقارير</div>
+    <div class="nav-tab" onclick="switchTab('tutoring',this)">🎯 دورات تقوية</div>
   </nav>
 </header>
 
@@ -496,6 +497,69 @@ tbody td{padding:10px 10px;vertical-align:middle;}
   </div>
 </div>
 
+
+<!-- TUTORING TAB (دورات التقوية) -->
+<div class="tab-panel" id="tab-tutoring">
+  <div class="card" style="padding:14px 18px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-gold" onclick="tutOpenAdd()">+ طالب جديد</button>
+      <button class="btn btn-success" onclick="tutExportExcel()">📤 تصدير Excel</button>
+      <div style="margin-right:auto;display:flex;gap:8px">
+        <button class="btn btn-gold" id="tutViewBtn-students" onclick="tutSwitchView('students')">👥 الطلاب</button>
+        <button class="btn btn-outline" id="tutViewBtn-accounts" onclick="tutSwitchView('accounts')" style="color:var(--navy);border-color:var(--navy)">💰 المحاسبة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- students view -->
+  <div id="tutView-students">
+    <div class="search-bar">
+      <input class="search-input" type="text" id="tutSearch" placeholder="🔍  ابحث بالاسم أو المدرسة أو الموبايل..." oninput="tutRenderTable()">
+      <select class="search-input" id="tutFilterGrade" onchange="tutRenderTable()" style="max-width:180px">
+        <option value="">كل الصفوف</option>
+      </select>
+      <select class="search-input" id="tutFilterSubject" onchange="tutRenderTable()" style="max-width:180px">
+        <option value="">كل المواد</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>الاسم الثلاثي</th><th>الصف</th><th>المدرسة</th><th>الموبايل</th>
+          <th>المواد والمدرسون</th><th>إجمالي الدفعات</th><th>العملة</th><th>إجراءات</th>
+        </tr></thead>
+        <tbody id="tutTableBody"></tbody>
+      </table>
+      <div class="no-data" id="tutNoData" style="display:none">لا يوجد طلاب في دورات التقوية. أضف أول طالب من زر "طالب جديد".</div>
+    </div>
+  </div>
+
+  <!-- accounting view (منفصل عن مدفوعات المعهد) -->
+  <div id="tutView-accounts" style="display:none">
+    <div id="tutAccSummary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:16px"></div>
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> سجل مدفوعات دورات التقوية</div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <select class="search-input" id="tutPayStudent" onchange="tutRenderAccounts()" style="max-width:220px"><option value="">كل الطلاب</option></select>
+        <select class="search-input" id="tutPayCurrency" onchange="tutRenderAccounts()" style="max-width:140px">
+          <option value="">كل العملات</option><option>ليرة سورية</option><option>دولار</option>
+        </select>
+        <select class="search-input" id="tutPayReceiver" onchange="tutRenderAccounts()" style="max-width:160px"><option value="">كل المستلمين</option></select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>اسم الطالب</th><th>رقم الدفعة</th><th>المبلغ</th><th>العملة</th>
+            <th>تاريخ الدفعة</th><th>المستلم</th><th>ملاحظة</th><th>إجمالي الطالب</th>
+          </tr></thead>
+          <tbody id="tutPayBody"></tbody>
+        </table>
+        <div class="no-data" id="tutNoPay" style="display:none">لا توجد دفعات.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /main -->
 
 <footer class="app-footer">معهد الألماس التعليمي — نظام إدارة الطلاب<br><span class="dev-credit">Developed by Samer.a.sh*Claude</span></footer>
@@ -593,6 +657,47 @@ tbody td{padding:10px 10px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- TUTORING STUDENT MODAL -->
+<div class="modal-overlay" id="tutModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="tutModalTitle">طالب جديد — دورات تقوية</h2>
+      <button class="close-btn" onclick="tutCloseModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="card-title" style="margin-bottom:14px"><span class="dot"></span> المعلومات الشخصية</div>
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1"><label>الاسم الثلاثي <span class="required">*</span></label><input type="text" id="tut-name" placeholder="الاسم الأول + اسم الأب + الشهرة"></div>
+        <div class="form-group"><label>رقم الموبايل (1) <span class="required">*</span></label><input type="tel" id="tut-mobile1" placeholder="09xxxxxxxx"></div>
+        <div class="form-group"><label>رقم الموبايل (2)</label><input type="tel" id="tut-mobile2" placeholder="09xxxxxxxx"></div>
+        <div class="form-group"><label>المدرسة القادم منها</label><input type="text" id="tut-school"></div>
+        <div class="form-group"><label>الصف <span class="required">*</span></label>
+          <select id="tut-grade" onchange="tutRenderSubjects()"></select>
+        </div>
+      </div>
+      <hr class="section-div">
+      <div class="card-title" style="margin-bottom:6px"><span class="dot"></span> المواد</div>
+      <div class="input-note" style="margin-bottom:10px">اضغط على المادة لتحديدها (✔) ثم اختر المدرس/المدرسين.</div>
+      <div id="tutSubjects"></div>
+      <hr class="section-div">
+      <div class="card-title" style="margin-bottom:12px"><span class="dot"></span> الدفعات</div>
+      <div id="tutPayments"></div>
+      <button class="btn btn-outline" onclick="tutAddPayRow()" style="margin-top:6px;color:var(--navy);border-color:var(--navy)">+ إضافة دفعة</button>
+      <div class="payment-total" style="margin-top:14px">
+        <span>الإجمالي:</span>
+        <span class="amount" id="tutPayTotal">0</span>
+        <select id="tut-currency" style="background:transparent;border:1px solid rgba(255,255,255,0.3);color:white;padding:4px 8px;border-radius:6px;font-family:'Cairo',sans-serif">
+          <option style="color:black">ليرة سورية</option><option style="color:black">دولار</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="tutCloseModal()" style="color:var(--navy);border-color:var(--navy)">إلغاء</button>
+      <button class="btn btn-gold" id="tutSaveBtn" onclick="tutSave()">💾 حفظ البيانات</button>
+    </div>
+  </div>
+</div>
+
 <!-- PRINT CHOICE MODAL -->
 <div class="modal-overlay" id="printChoiceModal" onclick="if(event.target===this)closePrintChoice()">
   <div class="modal" style="max-width:440px">
@@ -659,6 +764,8 @@ let editingId = null;
 let paymentRowCount = 0;
 let unsubStudents = null;
 let unsubAtt = null;
+let unsubTut = null;
+let tutStudents = [];
 let isFirebaseReady = false;
 
 // ============================================================
@@ -763,10 +870,17 @@ async function initFirebase() {
         updateStats();
       }, () => { attendance = {}; });
 
+      // Tutoring (دورات التقوية) realtime listener — separate collection
+      unsubTut = db.collection('tutoring_students').onSnapshot(snap => {
+        tutStudents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        tutRenderAll();
+      }, err => { tutStudents = []; console.warn('tutoring listener:', err.message); });
+
     } else {
       // Not logged in — show login screen
       if (unsubStudents) { unsubStudents(); unsubStudents = null; }
       if (unsubAtt) { unsubAtt(); unsubAtt = null; }
+      if (unsubTut) { unsubTut(); unsubTut = null; }
       overlay.style.display = 'none';
       loginScreen.style.display = 'flex';
       isFirebaseReady = false;
@@ -795,6 +909,7 @@ function switchTab(tab, el) {
   if (tab === 'grades') initGrades();
   if (tab === 'payments') { renderPaymentsView(); populatePayFilterStudent(); }
   if (tab === 'reports') renderReports();
+  if (tab === 'tutoring') tutInit();
 }
 
 // ============================================================
@@ -1713,6 +1828,27 @@ const GRADE_SUBJECTS = {
   'default':['رياضيات','فيزياء','كيمياء','علوم','عربي','إنكليزي','فرنسي','ديانة']
 };
 
+// الثالث الثانوي: العلامة العظمى لكل مادة (تُطبَّق على المذاكرة الأولى والثانية والامتحان لكلٍّ منها)
+const THIRD_SEC_SUBJECTS = {
+  'علمي': [['رياضيات تحليل',300],['رياضيات اشعة',300],['فيزياء',400],['كيمياء',200],['علوم',300],['عربي',400],['إنكليزي',300],['فرنسي',300],['ديانة',200]],
+  'أدبي': [['عربي',600],['تاريخ',300],['جغرافيا',300],['فلسفة',400],['ديانة',200],['إنكليزي',400],['فرنسي',400]]
+};
+function isThirdSec(st) { return !!(st && st.grade === 'الثالث الثانوي' && THIRD_SEC_SUBJECTS[st.branch]); }
+function getSubjectMax(st, subj) {
+  if (isThirdSec(st)) {
+    const f = THIRD_SEC_SUBJECTS[st.branch].find(x => x[0] === subj);
+    if (f) return { q1: f[1], q2: f[1], exam: f[1] };
+  }
+  return { q1: 30, q2: 30, exam: 40 };
+}
+function gradeHdr(st) {
+  return isThirdSec(st) ? { q1: '(حسب المادة)', q2: '(حسب المادة)', ex: '(حسب المادة)', t: '(المجموع)' }
+                        : { q1: '/30', q2: '/30', ex: '/40', t: '/100' };
+}
+function gradeCell(v, mx, st) {
+  return (v === '—' || !isThirdSec(st)) ? v : `${v}<small style="color:#888"> / ${mx}</small>`;
+}
+
 let gradesData = {}; // { studentId: { sem1: {subject: {q1,q2,exam}}, sem2: {...} } }
 let currentViewId = '';
 let currentGradeStudent = null;
@@ -1814,6 +1950,19 @@ async function loadGrades() {
   if (!gradesData[sid].sem2) gradesData[sid].sem2 = {};
   if (!gradesData[sid].participation) gradesData[sid].participation = {};
 
+  // الثالث الثانوي: توحيد أسماء المواد القديمة مع الجديدة
+  if (isThirdSec(currentGradeStudent)) {
+    const ren = { 'التربية الدينية': 'ديانة', 'فرنسي/روسي': 'فرنسي' };
+    ['sem1', 'sem2'].forEach(sk => {
+      const d = gradesData[sid][sk], p = gradesData[sid].participation;
+      Object.keys(ren).forEach(o => {
+        if (d[o]) { if (!d[ren[o]]) d[ren[o]] = d[o]; delete d[o]; }
+        const ok = sk + '_' + o, nk = sk + '_' + ren[o];
+        if (p[ok]) { p[nk] = (p[nk] || []).concat(p[ok]); delete p[ok]; }
+      });
+    });
+  }
+
   renderGradesTable(1);
   renderGradesTable(2);
   switchSemester(1);
@@ -1821,6 +1970,7 @@ async function loadGrades() {
 
 function getSubjectsForStudent(s) {
   if (!s) return GRADE_SUBJECTS['default'];
+  if (isThirdSec(s)) return THIRD_SEC_SUBJECTS[s.branch].map(x => x[0]);
   return GRADE_SUBJECTS[s.branch] || GRADE_SUBJECTS['default'];
 }
 
@@ -1841,15 +1991,21 @@ function renderGradesTable(sem) {
   const data = gradesData[sid]?.[semKey] || {};
   const tbody = document.getElementById('gradesBody'+sem);
 
-  let totalSum = 0, totalCount = 0;
+  const third = isThirdSec(currentGradeStudent);
+  const hl = third ? ['حسب المادة','حسب المادة','حسب المادة','المجموع'] : ['/30','/30','/40','/100'];
+  document.querySelectorAll('#gradesTable' + sem + ' thead th small').forEach((el, i) => { if (hl[i] !== undefined) el.textContent = hl[i]; });
+  let totalSum = 0, totalMaxSum = 0, totalCount = 0;
   tbody.innerHTML = subjects.map(subj => {
     const g = data[subj] || {};
+    const m = getSubjectMax(currentGradeStudent, subj);
+    const mt = m.q1 + m.q2 + m.exam;
     const q1 = g.q1!==undefined ? g.q1 : '';
     const q2 = g.q2!==undefined ? g.q2 : '';
     const ex = g.exam!==undefined ? g.exam : '';
     const total = (q1!==''&&q2!==''&&ex!=='') ? (parseFloat(q1)||0)+(parseFloat(q2)||0)+(parseFloat(ex)||0) : null;
-    if (total !== null) { totalSum += total; totalCount++; }
-    const totalDisplay = total !== null ? `<span class="grade-total ${total>=50?'grade-a':'grade-d'}">${total}</span>` : '';
+    if (total !== null) { totalSum += total; totalMaxSum += mt; totalCount++; }
+    const pct = total !== null ? total / mt * 100 : null;
+    const totalDisplay = total !== null ? `<span class="grade-total ${pct>=50?'grade-a':'grade-d'}">${total}</span>${third ? `<small style="color:var(--text2)"> / ${mt}</small>` : ''}` : '';
     // participation count for this subject
     const partKey = semKey + '_' + subj;
     const partList = (gradesData[sid]?.participation || {})[partKey] || [];
@@ -1858,15 +2014,15 @@ function renderGradesTable(sem) {
       ? `<span style="background:var(--gold);color:var(--navy);border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:4px">${partCount}</span>`
       : '';
     return `<tr>
-      <td style="font-weight:600;white-space:nowrap">${subj}</td>
-      <td><input class="grade-input" type="number" min="0" max="30" value="${q1}" placeholder="—"
-        oninput="updateGrade('${sid}','${semKey}','${subj}','q1',this.value,${sem})" onblur="validateGrade(this,30)"></td>
-      <td><input class="grade-input" type="number" min="0" max="30" value="${q2}" placeholder="—"
-        oninput="updateGrade('${sid}','${semKey}','${subj}','q2',this.value,${sem})" onblur="validateGrade(this,30)"></td>
-      <td><input class="grade-input" type="number" min="0" max="40" value="${ex}" placeholder="—"
-        oninput="updateGrade('${sid}','${semKey}','${subj}','exam',this.value,${sem})" onblur="validateGrade(this,40)"></td>
+      <td style="font-weight:600;white-space:nowrap">${subj}${third ? `<small style="font-weight:400;color:var(--text2)"> (${m.q1})</small>` : ''}</td>
+      <td><input class="grade-input" type="text" inputmode="decimal" autocomplete="off" min="0" max="${m.q1}" value="${q1}" placeholder="${third ? '/' + m.q1 : '—'}"
+        oninput="updateGrade('${sid}','${semKey}','${subj}','q1',this.value,${sem})" onblur="validateGrade(this,${m.q1})"></td>
+      <td><input class="grade-input" type="text" inputmode="decimal" autocomplete="off" min="0" max="${m.q2}" value="${q2}" placeholder="${third ? '/' + m.q2 : '—'}"
+        oninput="updateGrade('${sid}','${semKey}','${subj}','q2',this.value,${sem})" onblur="validateGrade(this,${m.q2})"></td>
+      <td><input class="grade-input" type="text" inputmode="decimal" autocomplete="off" min="0" max="${m.exam}" value="${ex}" placeholder="${third ? '/' + m.exam : '—'}"
+        oninput="updateGrade('${sid}','${semKey}','${subj}','exam',this.value,${sem})" onblur="validateGrade(this,${m.exam})"></td>
       <td>${totalDisplay}</td>
-      <td>${total!==null?getGrade(total):''}</td>
+      <td>${total!==null?getGrade(pct):''}</td>
       <td style="text-align:center">
         <button onclick="openPartModal('${sid}','${semKey}','${subj}',${sem})"
           style="background:transparent;border:1.5px solid var(--gold);color:var(--gold-dark);border-radius:8px;padding:4px 10px;font-family:'Cairo',sans-serif;font-size:12px;cursor:pointer;transition:all 0.2s"
@@ -1879,8 +2035,8 @@ function renderGradesTable(sem) {
   }).join('');
 
   // Average
-  const avg = totalCount > 0 ? (totalSum/totalCount).toFixed(1) : '—';
-  document.getElementById('avg'+sem).textContent = totalCount>0 ? avg : '—';
+  const avg = totalCount > 0 ? (totalSum/totalMaxSum*100).toFixed(1) : '—';
+  document.getElementById('avg'+sem).textContent = totalCount>0 ? avg + (third ? '%' : '') : '—';
   document.getElementById('avgGrade'+sem).innerHTML = totalCount>0 ? getGrade(parseFloat(avg)) : '';
 }
 
@@ -1894,9 +2050,23 @@ function updateGrade(sid, semKey, subj, field, val, sem) {
   if (!gradesData[sid]) gradesData[sid] = {sem1:{},sem2:{}};
   if (!gradesData[sid][semKey]) gradesData[sid][semKey] = {};
   if (!gradesData[sid][semKey][subj]) gradesData[sid][semKey][subj] = {};
-  if (val === '' || val === null) delete gradesData[sid][semKey][subj][field];
-  else gradesData[sid][semKey][subj][field] = parseFloat(val);
+  val = String(val === null || val === undefined ? '' : val).replace(/[^0-9.]/g, '');
+  let num = parseFloat(val);
+  if (val === '' || isNaN(num)) delete gradesData[sid][semKey][subj][field];
+  else {
+    const mx = getSubjectMax(currentGradeStudent, subj)[field];
+    if (mx !== undefined && num > mx) num = mx;
+    gradesData[sid][semKey][subj][field] = num;
+  }
+  // إعادة الرسم مع الحفاظ على الحقل الذي يكتب فيه المستخدم
+  const sel = '#gradesBody' + sem + ' .grade-input';
+  const ae = document.activeElement;
+  const idx = (ae && ae.classList && ae.classList.contains('grade-input')) ? [...document.querySelectorAll(sel)].indexOf(ae) : -1;
   renderGradesTable(sem);
+  if (idx >= 0) {
+    const el = document.querySelectorAll(sel)[idx];
+    if (el) { el.focus(); try { const l = el.value.length; el.setSelectionRange(l, l); } catch (e) {} }
+  }
 }
 
 async function saveGrades() {
@@ -1923,25 +2093,30 @@ function printGrades() {
   if (!sid || !currentGradeStudent) { alert('اختر طالباً أولاً'); return; }
   const s = currentGradeStudent;
   const subjects = getSubjectsForStudent(s);
+  const third = isThirdSec(s);
+  const H = gradeHdr(s);
   const today = new Date().toLocaleDateString('ar-SY',{year:'numeric',month:'long',day:'numeric'});
 
   function buildSemTable(semKey) {
     const data = gradesData[sid]?.[semKey]||{};
-    let totalSum=0, totalCount=0;
+    let totalSum=0, totalMaxSum=0, totalCount=0;
     const rows = subjects.map(subj => {
       const g = data[subj]||{};
+      const m = getSubjectMax(s, subj);
+      const mt = m.q1 + m.q2 + m.exam;
       const q1 = g.q1!==undefined?g.q1:'—';
       const q2 = g.q2!==undefined?g.q2:'—';
       const ex = g.exam!==undefined?g.exam:'—';
       const total = (g.q1!==undefined&&g.q2!==undefined&&g.exam!==undefined)?(g.q1+g.q2+g.exam):null;
-      if(total!==null){totalSum+=total;totalCount++;}
-      const grade = total!==null?(total>=90?'ممتاز':total>=75?'جيد جداً':total>=60?'جيد':total>=50?'مقبول':'راسب'):'';
+      if(total!==null){totalSum+=total;totalMaxSum+=mt;totalCount++;}
+      const pc = total!==null ? total/mt*100 : null;
+      const grade = total!==null?(pc>=90?'ممتاز':pc>=75?'جيد جداً':pc>=60?'جيد':pc>=50?'مقبول':'راسب'):'';
       const partKey = semKey+'_'+subj;
       const partList = (gradesData[sid]?.participation||{})[partKey]||[];
       const partCell = partList.length ? partList.map(p=>`<span style="font-size:10px;display:block">${p.type==='مشاركة'?'⭐':'📖'} ${p.date}: ${p.note}</span>`).join('') : '';
-      return `<tr><td>${subj}</td><td>${q1}</td><td>${q2}</td><td>${ex}</td><td style="font-weight:700">${total!==null?total:'—'}</td><td>${grade}</td><td style="font-size:11px">${partCell}</td></tr>`;
+      return `<tr><td>${subj}</td><td>${gradeCell(q1,m.q1,s)}</td><td>${gradeCell(q2,m.q2,s)}</td><td>${gradeCell(ex,m.exam,s)}</td><td style="font-weight:700">${total!==null?gradeCell(total,mt,s):'—'}</td><td>${grade}</td><td style="font-size:11px">${partCell}</td></tr>`;
     }).join('');
-    const avg = totalCount>0?(totalSum/totalCount).toFixed(1):'—';
+    const avg = totalCount>0?(totalSum/totalMaxSum*100).toFixed(1)+(third?'%':''):'—';
     return {rows, avg, totalCount};
   }
 
@@ -1985,12 +2160,12 @@ function printGrades() {
   <div><span>المدرسة</span><br><strong>${s.school||'—'}</strong></div>
 </div>
 <h3>📚 الفصل الأول</h3>
-<table><thead><tr><th>المادة</th><th>مذاكرة أولى /30</th><th>مذاكرة ثانية /30</th><th>امتحان /40</th><th>المجموع /100</th><th>التقدير</th><th>مشاركة/تسميع</th></tr></thead>
+<table><thead><tr><th>المادة</th><th>مذاكرة أولى ${H.q1}</th><th>مذاكرة ثانية ${H.q2}</th><th>امتحان ${H.ex}</th><th>المجموع ${H.t}</th><th>التقدير</th><th>مشاركة/تسميع</th></tr></thead>
 <tbody>${sem1.rows}</tbody>
 <tfoot><tr class="avg-row"><td colspan="4">المعدل العام للفصل الأول</td><td>${sem1.avg}</td><td></td></tr></tfoot>
 </table>
 <h3>📚 الفصل الثاني</h3>
-<table><thead><tr><th>المادة</th><th>مذاكرة أولى /30</th><th>مذاكرة ثانية /30</th><th>امتحان /40</th><th>المجموع /100</th><th>التقدير</th><th>مشاركة/تسميع</th></tr></thead>
+<table><thead><tr><th>المادة</th><th>مذاكرة أولى ${H.q1}</th><th>مذاكرة ثانية ${H.q2}</th><th>امتحان ${H.ex}</th><th>المجموع ${H.t}</th><th>التقدير</th><th>مشاركة/تسميع</th></tr></thead>
 <tbody>${sem2.rows}</tbody>
 <tfoot><tr class="avg-row"><td colspan="4">المعدل العام للفصل الثاني</td><td>${sem2.avg}</td><td></td></tr></tfoot>
 </table>
@@ -2032,24 +2207,29 @@ async function printStudentGradesReport(sid) {
     'مهني':  ['عربي','إنكليزي','رياضيات','تخصص مهني'],
     'default':['رياضيات','فيزياء','كيمياء','علوم','عربي','إنكليزي','فرنسي','ديانة']
   };
-  const subjectList = SUBJS[s.branch] || SUBJS['default'];
+  const subjectList = getSubjectsForStudent(s);
+  const third = isThirdSec(s);
+  const H = gradeHdr(s);
   const today = new Date().toLocaleDateString('ar-SY',{year:'numeric',month:'long',day:'numeric'});
   const absSt = getAbsenceStats(sid);
   const dayNm = d => { try { return new Date(d + 'T00:00:00').toLocaleDateString('ar-SY',{weekday:'long'}); } catch(e) { return ''; } };
 
   function buildSemSection(semKey, semLabel) {
     const semData = data[semKey] || {};
-    let totalSum=0, totalCount=0;
+    let totalSum=0, totalMaxSum=0, totalCount=0;
     const rows = subjectList.map(subj => {
       const g = semData[subj] || {};
+      const m = getSubjectMax(s, subj);
+      const mt = m.q1 + m.q2 + m.exam;
       const q1 = g.q1 !== undefined ? g.q1 : '—';
       const q2 = g.q2 !== undefined ? g.q2 : '—';
       const ex = g.exam !== undefined ? g.exam : '—';
       const total = (g.q1!==undefined && g.q2!==undefined && g.exam!==undefined)
         ? (g.q1 + g.q2 + g.exam) : null;
-      if (total !== null) { totalSum += total; totalCount++; }
-      const gradeWord = total === null ? '' : total>=90?'ممتاز':total>=75?'جيد جداً':total>=60?'جيد':total>=50?'مقبول':'راسب';
-      const gradeColor = total === null ? '' : total>=75?'#1A7A4A':total>=50?'#D68910':'#C0392B';
+      if (total !== null) { totalSum += total; totalMaxSum += mt; totalCount++; }
+      const pc = total === null ? null : total / mt * 100;
+      const gradeWord = total === null ? '' : pc>=90?'ممتاز':pc>=75?'جيد جداً':pc>=60?'جيد':pc>=50?'مقبول':'راسب';
+      const gradeColor = total === null ? '' : pc>=75?'#1A7A4A':pc>=50?'#D68910':'#C0392B';
 
       // Participation for this subject
       const partKey = semKey + '_' + subj;
@@ -2065,17 +2245,18 @@ async function printStudentGradesReport(sid) {
 
       return `<tr>
         <td style="font-weight:600">${subj}</td>
-        <td style="text-align:center">${q1}</td>
-        <td style="text-align:center">${q2}</td>
-        <td style="text-align:center">${ex}</td>
-        <td style="text-align:center;font-weight:700;color:${total!==null?(total>=50?'#1A7A4A':'#C0392B'):'#888'}">${total!==null?total:'—'}</td>
+        <td style="text-align:center">${gradeCell(q1,m.q1,s)}</td>
+        <td style="text-align:center">${gradeCell(q2,m.q2,s)}</td>
+        <td style="text-align:center">${gradeCell(ex,m.exam,s)}</td>
+        <td style="text-align:center;font-weight:700;color:${total!==null?(pc>=50?'#1A7A4A':'#C0392B'):'#888'}">${total!==null?gradeCell(total,mt,s):'—'}</td>
         <td style="text-align:center;font-weight:700;color:${gradeColor}">${gradeWord}</td>
         <td>${partHtml}</td>
       </tr>`;
     }).join('');
 
-    const avg = totalCount > 0 ? (totalSum/totalCount).toFixed(1) : '—';
-    const avgColor = totalCount>0?(parseFloat(avg)>=75?'#1A7A4A':parseFloat(avg)>=50?'#D68910':'#C0392B'):'#888';
+    const avgNum = totalCount > 0 ? (totalSum/totalMaxSum*100).toFixed(1) : '—';
+    const avg = totalCount > 0 ? avgNum + (third ? '%' : '') : '—';
+    const avgColor = totalCount>0?(parseFloat(avgNum)>=75?'#1A7A4A':parseFloat(avgNum)>=50?'#D68910':'#C0392B'):'#888';
     return { rows, avg, avgColor };
   }
 
@@ -2176,10 +2357,10 @@ async function printStudentGradesReport(sid) {
 <div class="sem-title">📚 الفصل الأول</div>
 <table>
   <thead><tr>
-    <th>المادة</th><th style="text-align:center">مذاكرة أولى /30</th>
-    <th style="text-align:center">مذاكرة ثانية /30</th>
-    <th style="text-align:center">امتحان /40</th>
-    <th style="text-align:center">المجموع /100</th>
+    <th>المادة</th><th style="text-align:center">مذاكرة أولى ${H.q1}</th>
+    <th style="text-align:center">مذاكرة ثانية ${H.q2}</th>
+    <th style="text-align:center">امتحان ${H.ex}</th>
+    <th style="text-align:center">المجموع ${H.t}</th>
     <th style="text-align:center">التقدير</th>
     <th>المشاركة والتسميع</th>
   </tr></thead>
@@ -2195,10 +2376,10 @@ async function printStudentGradesReport(sid) {
 <div class="sem-title">📚 الفصل الثاني</div>
 <table>
   <thead><tr>
-    <th>المادة</th><th style="text-align:center">مذاكرة أولى /30</th>
-    <th style="text-align:center">مذاكرة ثانية /30</th>
-    <th style="text-align:center">امتحان /40</th>
-    <th style="text-align:center">المجموع /100</th>
+    <th>المادة</th><th style="text-align:center">مذاكرة أولى ${H.q1}</th>
+    <th style="text-align:center">مذاكرة ثانية ${H.q2}</th>
+    <th style="text-align:center">امتحان ${H.ex}</th>
+    <th style="text-align:center">المجموع ${H.t}</th>
     <th style="text-align:center">التقدير</th>
     <th>المشاركة والتسميع</th>
   </tr></thead>
@@ -2336,6 +2517,318 @@ async function saveGradesData(sid) {
   } else {
     localStorage.setItem('grades_'+sid, JSON.stringify(gradesData[sid]||{}));
   }
+}
+
+// ============================================================
+// دورات التقوية — TUTORING COURSES (نظام محاسبة منفصل)
+// ============================================================
+const TUT_GRADES = ['تاسع','عاشر','حادي عشر','بكالوريا علمي','بكالوريا أدبي'];
+const TUT_SUBJECTS = ['وراثة','عضوية','فيزياء','كيمياء','فك','علوم','عربي','عربي قواعد','عربي تعبير','إنكليزي','إنكليزي قواعد','إنكليزي تعبير','فرنسي','فرنسي قواعد','فرنسي تعبير','رياضيات','فلسفة','تاريخ','جغرافيا','روسي','ديانة'];
+const TUT_TEACHERS = {
+  'رياضيات': ['عبدو عبدو','عمر دليقان','وضاح المحيثاوي','مشهور برجاس','عدنان الجرماني','نشأت عزيز','أدهم عقيل'],
+  'فيزياء':  ['هاشم أبو سعد','رامي الشومري','سالي صابوني'],
+  'كيمياء':  ['هاشم أبو سعد','رامي الحرفوش','رامي الشومري','سالي صابوني'],
+  'عضوية':   ['هاشم أبو سعد','رامي الحرفوش','رامي الشومري','سالي صابوني'],
+  'وراثة':   ['معتصم الشعار','مأمون الحكيم'],
+  'فك':      ['أماني أبو حمدان'],
+  'علوم':    ['معتصم الشعار','مأمون الحكيم'],
+  'إنكليزي': ['خالد أبو عجرم','أسامة ملاك'],
+  'إنكليزي قواعد': ['خالد أبو عجرم','أسامة ملاك'],
+  'إنكليزي تعبير': ['خالد أبو عجرم','أسامة ملاك'],
+  'عربي':    ['ضياء عبد القادر','إيهاب أبو فخر'],
+  'عربي قواعد': ['ضياء عبد القادر','إيهاب أبو فخر'],
+  'عربي تعبير': ['ضياء عبد القادر','إيهاب أبو فخر'],
+  'فرنسي':   ['نبيل المعاز'],
+  'فرنسي قواعد': ['نبيل المعاز'],
+  'فرنسي تعبير': ['نبيل المعاز'],
+  'تاريخ':   ['ثامر أبو حسان','سامر أبو شقرة'],
+  'فلسفة':   ['طليع كيوان'],
+  'جغرافيا': ['وليد كيوان'],
+  'روسي':    ['عاهد سلام'],
+  'ديانة':   ['ليال السلمان']
+};
+// مدرسون مقيَّدون بصف معيّن (يظهرون فقط عند اختيار هذا الصف)
+const TUT_TEACHER_GRADES = { 'نشأت عزيز': ['بكالوريا علمي'], 'أدهم عقيل': ['بكالوريا علمي'] };
+function tutTeacherAllowed(sub, t) {
+  const g = document.getElementById('tut-grade')?.value || '';
+  const lim = TUT_TEACHER_GRADES[t];
+  return !lim || lim.includes(g) || (tutSel[sub] || []).includes(t);
+}
+let tutEditingId = null;
+let tutPayCount = 0;
+let tutSel = {};   // subject -> [teachers]
+
+function tutInit() {
+  const g = document.getElementById('tutFilterGrade');
+  if (g && g.options.length <= 1) g.innerHTML = '<option value="">كل الصفوف</option>' + TUT_GRADES.map(x => `<option>${x}</option>`).join('');
+  const s = document.getElementById('tutFilterSubject');
+  if (s && s.options.length <= 1) s.innerHTML = '<option value="">كل المواد</option>' + TUT_SUBJECTS.map(x => `<option>${x}</option>`).join('');
+  const r = document.getElementById('tutPayReceiver');
+  if (r && r.options.length <= 1) r.innerHTML = '<option value="">كل المستلمين</option>' + RECEIVERS.map(x => `<option>${x}</option>`).join('');
+  tutRenderAll();
+}
+function tutRenderAll() {
+  if (!document.getElementById('tab-tutoring')) return;
+  tutRenderTable();
+  tutPopulatePayFilter();
+  tutRenderAccounts();
+}
+function tutSwitchView(v) {
+  document.getElementById('tutView-students').style.display = v === 'students' ? '' : 'none';
+  document.getElementById('tutView-accounts').style.display = v === 'accounts' ? '' : 'none';
+  const a = document.getElementById('tutViewBtn-students'), b = document.getElementById('tutViewBtn-accounts');
+  a.className = 'btn ' + (v === 'students' ? 'btn-gold' : 'btn-outline');
+  b.className = 'btn ' + (v === 'accounts' ? 'btn-gold' : 'btn-outline');
+  a.style.cssText = v === 'students' ? '' : 'color:var(--navy);border-color:var(--navy)';
+  b.style.cssText = v === 'accounts' ? '' : 'color:var(--navy);border-color:var(--navy)';
+  if (v === 'accounts') tutRenderAccounts();
+}
+function tutTotal(s) { return (s.payments || []).reduce((a, p) => a + (parseFloat(p.amount) || 0), 0); }
+
+// ---------- table ----------
+function tutRenderTable() {
+  const tbody = document.getElementById('tutTableBody'); if (!tbody) return;
+  const q = (document.getElementById('tutSearch')?.value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const fg = document.getElementById('tutFilterGrade')?.value || '';
+  const fs = document.getElementById('tutFilterSubject')?.value || '';
+  const list = tutStudents.filter(s => {
+    const t = ((s.name||'') + ' ' + (s.school||'') + ' ' + (s.mobile1||'') + ' ' + (s.mobile2||'')).toLowerCase();
+    return (!q || t.includes(q)) && (!fg || s.grade === fg) && (!fs || (s.subjects||[]).some(x => x.subject === fs));
+  });
+  const nd = document.getElementById('tutNoData');
+  if (!list.length) { tbody.innerHTML = ''; nd.style.display = 'block'; return; }
+  nd.style.display = 'none';
+  tbody.innerHTML = list.map((s, i) => {
+    const wa = (s.mobile1 || '').replace(/^0/, '963').replace(/\s/g, '');
+    const subs = (s.subjects || []).map(x => `<span class="tag">${escH(x.subject)}${(x.teachers||[]).length ? ' — ' + escH(x.teachers.join('، ')) : ''}</span>`).join('');
+    return `<tr>
+      <td>${i + 1}</td>
+      <td><strong>${escH(s.name)}</strong></td>
+      <td><span class="badge badge-gold">${escH(s.grade)}</span></td>
+      <td>${escH(s.school || '-')}</td>
+      <td><div>${escH(s.mobile1 || '')}</div>${s.mobile2 ? `<div>${escH(s.mobile2)}</div>` : ''}<a class="wa-link" href="https://wa.me/${wa}" target="_blank">📱 واتساب</a></td>
+      <td>${subs || '-'}</td>
+      <td><strong style="color:var(--gold-dark)">${tutTotal(s).toLocaleString('ar-SY')}</strong></td>
+      <td>${escH(s.currency || 'ليرة سورية')}</td>
+      <td><div class="action-btns">
+        <button class="btn btn-gold btn-sm" onclick="tutOpenEdit('${s.id}')">✏️</button>
+        ${isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="tutDelete('${s.id}')">🗑</button>` : ''}
+      </div></td></tr>`;
+  }).join('');
+}
+
+// ---------- modal ----------
+function tutFillGrades(sel) {
+  document.getElementById('tut-grade').innerHTML = '<option value="">-- اختر الصف --</option>' +
+    TUT_GRADES.map(g => `<option ${g === sel ? 'selected' : ''}>${g}</option>`).join('');
+}
+function tutOpenAdd() {
+  tutEditingId = null;
+  document.getElementById('tutModalTitle').textContent = 'طالب جديد — دورات تقوية';
+  ['tut-name','tut-mobile1','tut-mobile2','tut-school'].forEach(id => document.getElementById(id).value = '');
+  tutFillGrades('');
+  tutSel = {};
+  tutRenderSubjects();
+  document.getElementById('tut-currency').value = 'ليرة سورية';
+  tutPayCount = 0; document.getElementById('tutPayments').innerHTML = ''; tutAddPayRow(); tutCalcTotal();
+  document.getElementById('tutModal').classList.add('open');
+}
+function tutOpenEdit(id) {
+  const s = tutStudents.find(x => x.id === id); if (!s) return;
+  tutEditingId = id;
+  document.getElementById('tutModalTitle').textContent = 'تعديل بيانات — دورات تقوية';
+  document.getElementById('tut-name').value = s.name || '';
+  document.getElementById('tut-mobile1').value = s.mobile1 || '';
+  document.getElementById('tut-mobile2').value = s.mobile2 || '';
+  document.getElementById('tut-school').value = s.school || '';
+  tutFillGrades(s.grade || '');
+  tutSel = {};
+  (s.subjects || []).forEach(x => tutSel[x.subject] = [...(x.teachers || [])]);
+  tutRenderSubjects();
+  document.getElementById('tut-currency').value = s.currency || 'ليرة سورية';
+  tutPayCount = 0; document.getElementById('tutPayments').innerHTML = '';
+  if ((s.payments || []).length) s.payments.forEach(p => tutAddPayRow(p)); else tutAddPayRow();
+  tutCalcTotal();
+  document.getElementById('tutModal').classList.add('open');
+}
+function tutCloseModal() { document.getElementById('tutModal').classList.remove('open'); }
+
+function tutRenderSubjects() {
+  document.getElementById('tutSubjects').innerHTML = `<div class="check-grid">` + TUT_SUBJECTS.map(sub => {
+    const on = sub in tutSel;
+    return `<label class="check-item ${on ? 'selected' : ''}">
+      <input type="checkbox" ${on ? 'checked' : ''} onchange="tutToggleSubject('${sub}', this.checked)">
+      <span>${on ? '✔ ' : ''}${sub}</span></label>`;
+  }).join('') + `</div>` + Object.keys(tutSel).map(sub => `
+    <div style="margin-top:12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#FFFCF4">
+      <div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">✔ ${sub} — اختر المدرس</div>
+      <div class="check-grid">` + (TUT_TEACHERS[sub] || []).filter(t => tutTeacherAllowed(sub, t)).map(t => {
+        const on = (tutSel[sub] || []).includes(t);
+        return `<label class="check-item ${on ? 'selected' : ''}">
+          <input type="checkbox" ${on ? 'checked' : ''} onchange="tutToggleTeacher('${sub}','${t}', this.checked)">
+          <span>${t}</span></label>`;
+      }).join('') + `</div></div>`).join('');
+}
+function tutToggleSubject(sub, on) {
+  if (on) tutSel[sub] = tutSel[sub] || []; else delete tutSel[sub];
+  tutRenderSubjects();
+}
+function tutToggleTeacher(sub, t, on) {
+  const a = tutSel[sub] || [];
+  tutSel[sub] = on ? [...new Set([...a, t])] : a.filter(x => x !== t);
+  tutRenderSubjects();
+}
+
+// ---------- payments (آخر النموذج) ----------
+function tutAddPayRow(d = {}) {
+  tutPayCount++;
+  const id = tutPayCount;
+  const div = document.createElement('div');
+  div.className = 'payment-row';
+  div.id = 'tut-pay-row-' + id;
+  div.style.gridTemplateColumns = '1fr 1fr 1fr 1fr auto';
+  div.innerHTML = `
+    <div class="form-group"><label>المبلغ</label><input type="number" id="tut-pay-amount-${id}" value="${d.amount || ''}" min="0" placeholder="0" oninput="tutCalcTotal()"></div>
+    <div class="form-group"><label>تاريخ الدفعة</label><input type="date" id="tut-pay-date-${id}" value="${d.date || new Date().toISOString().split('T')[0]}"></div>
+    <div class="form-group"><label>المستلم</label><select id="tut-pay-recv-${id}">${RECEIVERS.map(r => `<option ${d.receiver === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+    <div class="form-group"><label>ملاحظة</label><input type="text" id="tut-pay-note-${id}" value="${escH(d.note || '')}" placeholder="اختياري"></div>
+    <div><button class="btn btn-danger btn-sm" onclick="tutRemovePayRow(${id})" style="margin-top:20px">✕</button></div>`;
+  document.getElementById('tutPayments').appendChild(div);
+  tutCalcTotal();
+}
+function tutRemovePayRow(id) { document.getElementById('tut-pay-row-' + id)?.remove(); tutCalcTotal(); }
+function tutCalcTotal() {
+  let t = 0;
+  document.querySelectorAll('[id^="tut-pay-amount-"]').forEach(i => t += parseFloat(i.value) || 0);
+  document.getElementById('tutPayTotal').textContent = t.toLocaleString('ar-SY');
+}
+function tutGetPayments() {
+  return [...document.querySelectorAll('[id^="tut-pay-row-"]')].map(row => {
+    const id = row.id.replace('tut-pay-row-', '');
+    return {
+      amount: parseFloat(document.getElementById('tut-pay-amount-' + id)?.value) || 0,
+      date: document.getElementById('tut-pay-date-' + id)?.value || '',
+      receiver: document.getElementById('tut-pay-recv-' + id)?.value || '',
+      note: document.getElementById('tut-pay-note-' + id)?.value.trim() || ''
+    };
+  }).filter(p => p.amount > 0);
+}
+
+// ---------- save / delete ----------
+async function tutSave() {
+  const name = document.getElementById('tut-name').value.trim();
+  const mobile1 = document.getElementById('tut-mobile1').value.trim();
+  const grade = document.getElementById('tut-grade').value;
+  if (!name) { alert('الرجاء إدخال الاسم الثلاثي'); return; }
+  if (!mobile1) { alert('الرجاء إدخال رقم الموبايل'); return; }
+  if (!grade) { alert('الرجاء اختيار الصف'); return; }
+  const btn = document.getElementById('tutSaveBtn');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+  const data = {
+    name, mobile1,
+    mobile2: document.getElementById('tut-mobile2').value.trim(),
+    school: document.getElementById('tut-school').value.trim(),
+    grade,
+    subjects: Object.keys(tutSel).map(sub => ({ subject: sub, teachers: tutSel[sub] || [] })),
+    payments: tutGetPayments(),
+    currency: document.getElementById('tut-currency').value,
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    if (tutEditingId) await db.collection('tutoring_students').doc(tutEditingId).update(data);
+    else { data.createdAt = new Date().toISOString(); await db.collection('tutoring_students').add(data); }
+    tutCloseModal();
+  } catch (e) {
+    alert('خطأ في الحفظ: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 حفظ البيانات';
+}
+async function tutDelete(id) {
+  if (!isAdmin()) { alert('ليس لديك صلاحية الحذف'); return; }
+  if (!confirm('هل أنت متأكد من حذف هذا الطالب من دورات التقوية؟')) return;
+  try { await db.collection('tutoring_students').doc(id).delete(); }
+  catch (e) { alert('خطأ في الحذف: ' + e.message); }
+}
+
+// ---------- accounting ----------
+function tutPopulatePayFilter() {
+  const sel = document.getElementById('tutPayStudent'); if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">كل الطلاب</option>' + tutStudents.map(s => `<option value="${s.id}">${escH(s.name)}</option>`).join('');
+  sel.value = cur;
+}
+function tutRenderAccounts() {
+  const body = document.getElementById('tutPayBody'); if (!body) return;
+  const fs = document.getElementById('tutPayStudent')?.value || '';
+  const fc = document.getElementById('tutPayCurrency')?.value || '';
+  const fr = document.getElementById('tutPayReceiver')?.value || '';
+  const rows = [];
+  tutStudents.forEach(s => {
+    if (fs && s.id !== fs) return;
+    if (fc && (s.currency || 'ليرة سورية') !== fc) return;
+    const total = tutTotal(s);
+    (s.payments || []).forEach((p, i) => {
+      if (fr && p.receiver !== fr) return;
+      rows.push({ student: s.name, idx: i + 1, amount: parseFloat(p.amount) || 0, currency: s.currency || 'ليرة سورية', date: p.date || '-', receiver: p.receiver || '-', note: p.note || '', total });
+    });
+  });
+  // summary per currency + per receiver
+  const byCur = {}, byRecv = {};
+  rows.forEach(r => {
+    byCur[r.currency] = (byCur[r.currency] || 0) + r.amount;
+    const k = r.receiver + ' (' + r.currency + ')';
+    byRecv[k] = (byRecv[k] || 0) + r.amount;
+  });
+  const sum = document.getElementById('tutAccSummary');
+  sum.innerHTML =
+    `<div class="card" style="text-align:center;padding:16px"><div style="font-size:26px;font-weight:700;color:var(--navy)">${tutStudents.length}</div><div style="font-size:12px;color:var(--text2)">طلاب الدورات</div></div>` +
+    Object.keys(byCur).map(c => `<div class="card" style="text-align:center;padding:16px"><div style="font-size:26px;font-weight:700;color:var(--gold-dark)">${byCur[c].toLocaleString('ar-SY')}</div><div style="font-size:12px;color:var(--text2)">إجمالي المقبوضات — ${escH(c)}</div></div>`).join('') +
+    Object.keys(byRecv).map(k => `<div class="card" style="text-align:center;padding:16px"><div style="font-size:22px;font-weight:700;color:var(--success)">${byRecv[k].toLocaleString('ar-SY')}</div><div style="font-size:12px;color:var(--text2)">استلم: ${escH(k)}</div></div>`).join('');
+  const nm = document.getElementById('tutNoPay');
+  if (!rows.length) { body.innerHTML = ''; nm.style.display = 'block'; return; }
+  nm.style.display = 'none';
+  body.innerHTML = rows.map(r => `<tr>
+    <td><strong>${escH(r.student)}</strong></td>
+    <td><span class="badge badge-navy">الدفعة ${r.idx}</span></td>
+    <td style="color:var(--gold-dark);font-weight:700">${r.amount.toLocaleString('ar-SY')}</td>
+    <td>${escH(r.currency)}</td>
+    <td>${escH(r.date)}</td>
+    <td><span class="badge badge-green">${escH(r.receiver)}</span></td>
+    <td style="color:var(--text2)">${escH(r.note)}</td>
+    <td style="font-weight:700;color:var(--navy)">${r.total.toLocaleString('ar-SY')}</td>
+  </tr>`).join('');
+}
+
+// ---------- Excel ----------
+function tutExportExcel() {
+  if (!auth.currentUser) { alert('الرجاء تسجيل الدخول'); return; }
+  if (!tutStudents.length) { alert('لا يوجد طلاب في دورات التقوية'); return; }
+  const wb = XLSX.utils.book_new();
+  const sd = [['#','الاسم الثلاثي','الموبايل 1','الموبايل 2','المدرسة','الصف','المواد','المدرسون (حسب المادة)','إجمالي الدفعات','العملة']];
+  tutStudents.forEach((s, i) => sd.push([
+    i + 1, s.name, s.mobile1, s.mobile2, s.school, s.grade,
+    (s.subjects || []).map(x => x.subject).join('، '),
+    (s.subjects || []).map(x => x.subject + ': ' + (x.teachers || []).join(' / ')).join(' | '),
+    tutTotal(s), s.currency || 'ليرة سورية'
+  ]));
+  const ws1 = XLSX.utils.aoa_to_sheet(sd);
+  ws1['!cols'] = [{wch:5},{wch:26},{wch:14},{wch:14},{wch:22},{wch:16},{wch:34},{wch:60},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'طلاب التقوية');
+  // sheet per student-subject-teacher
+  const td = [['الطالب','الصف','المادة','المدرس']];
+  tutStudents.forEach(s => (s.subjects || []).forEach(x => {
+    if ((x.teachers || []).length) x.teachers.forEach(t => td.push([s.name, s.grade, x.subject, t]));
+    else td.push([s.name, s.grade, x.subject, '']);
+  }));
+  const ws2 = XLSX.utils.aoa_to_sheet(td); ws2['!cols'] = [{wch:26},{wch:16},{wch:14},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'المواد والمدرسون');
+  const pd = [['اسم الطالب','رقم الدفعة','المبلغ','العملة','تاريخ الدفعة','المستلم','ملاحظة']];
+  tutStudents.forEach(s => (s.payments || []).forEach((p, i) => pd.push([s.name, i + 1, p.amount, s.currency || 'ليرة سورية', p.date, p.receiver, p.note])));
+  const ws3 = XLSX.utils.aoa_to_sheet(pd); ws3['!cols'] = [{wch:26},{wch:10},{wch:12},{wch:12},{wch:14},{wch:16},{wch:24}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'المحاسبة');
+  if (!wb.Workbook) wb.Workbook = {};
+  wb.Workbook.Views = [{ RTL: true }];
+  XLSX.writeFile(wb, 'دورات_التقوية_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
 // ============================================================
